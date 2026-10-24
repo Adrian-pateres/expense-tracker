@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Agenda & Bank Tracker</title>
+
+  <!-- iPhone / iOS Web App Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ExpenseTrack" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 font-sans select-none">
+
+  <!-- Header -->
+  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-10 px-5 py-4 flex justify-between items-center">
+    <div>
+      <h1 class="text-lg font-bold text-white tracking-tight">My Fund Tracker</h1>
+      <p class="text-xs text-slate-400">Track every peso per bank or agenda</p>
+    </div>
+    <button onclick="toggleAccountModal(true)" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition text-xs font-semibold px-3.5 py-2 rounded-xl shadow">
+      + New Bank/Agenda
+    </button>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 pt-4 space-y-5">
+
+    <!-- Horizontal Tabs para sa imong mga Bank / Agenda -->
+    <div>
+      <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Select Account / Agenda</p>
+      <div id="accountTabs" class="flex gap-2 overflow-x-auto pb-2">
+        <!-- Mo-render diri ang mga buttons sa BPI, GCash, etc. -->
+      </div>
+    </div>
+
+    <!-- Main Balance Card -->
+    <div id="activeAccountCard" class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 shadow-lg hidden">
+      <div class="flex justify-between items-start">
+        <div>
+          <span class="text-xs uppercase tracking-wider text-blue-200 font-medium">Active Account</span>
+          <h2 id="cardTitle" class="text-2xl font-bold text-white mt-0.5">BPI Bank</h2>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="switchToDepositMode()" class="text-xs font-semibold text-emerald-200 hover:text-white bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-1 rounded-lg active:scale-95 transition">
+            + Top-up
+          </button>
+          <button onclick="deleteCurrentAccount()" class="text-xs text-blue-200 hover:text-red-300 bg-white/10 px-2.5 py-1 rounded-lg">
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-5">
+        <span class="text-xs text-blue-200">Remaining Balance</span>
+        <p id="cardRemaining" class="text-4xl font-extrabold text-white tracking-tight mt-0.5">₱0.00</p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/20 text-xs">
+        <div>
+          <span class="text-blue-200 block">Starting</span>
+          <span id="cardInitial" class="font-semibold text-white text-sm">₱0.00</span>
+        </div>
+        <div>
+          <span class="text-blue-200 block">Added (+)</span>
+          <span id="cardDeposited" class="font-semibold text-emerald-300 text-sm">+₱0.00</span>
+        </div>
+        <div>
+          <span class="text-blue-200 block">Spent (-)</span>
+          <span id="cardSpent" class="font-semibold text-rose-300 text-sm">-₱0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form para Mag-Add og Gasto (Expense) o Kwarta (Deposit) -->
+    <div id="expenseFormContainer" class="bg-slate-800 border border-slate-700 rounded-2xl p-4 hidden">
+      
+      <!-- Mode Switcher: Expense vs Deposit -->
+      <div class="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl mb-3.5 border border-slate-700/70">
+        <button type="button" id="btnModeExpense" onclick="setTransactionType('expense')" 
+          class="py-2 rounded-lg text-xs font-bold transition bg-rose-600 text-white shadow">
+          - Record Gasto
+        </button>
+        <button type="button" id="btnModeDeposit" onclick="setTransactionType('deposit')" 
+          class="py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">
+          + Add Funds / Deposit
+        </button>
+      </div>
+
+      <form id="expenseForm" class="space-y-3">
+        <!-- Category Selector -->
+        <div>
+          <label class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block mb-1.5">Category</label>
+          <div id="categoryPills" class="flex gap-1.5 overflow-x-auto pb-1">
+            <!-- Dynamic category buttons gikan sa JS -->
+          </div>
+        </div>
+
+        <div>
+          <input type="text" id="expenseDetail" required placeholder="Unsay gigastohan? (e.g. Jollibee, Gasolina)" 
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div class="flex gap-2">
+          <input type="number" id="expenseAmount" step="0.01" min="0.01" required placeholder="Kantidad (₱)" 
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+          <button type="submit" id="submitTxBtn" class="bg-rose-600 hover:bg-rose-500 active:scale-95 transition text-white font-semibold px-5 py-2.5 rounded-xl text-sm shrink-0">
+            Deduct
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Date Filter & Transaction History -->
+    <div id="historySection" class="hidden space-y-3">
+      
+      <!-- Filter Controls -->
+      <div class="bg-slate-800/70 border border-slate-700/80 rounded-2xl p-3.5 space-y-3">
+        <div class="flex justify-between items-center">
+          <h3 class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Filter by Date</h3>
+          <input type="date" id="customDateInput" onchange="setDateFilter('custom', this.value)"
+            class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <!-- Quick Filter Buttons -->
+        <div class="grid grid-cols-4 gap-1.5" id="dateFilterButtons">
+          <button onclick="setDateFilter('all')" data-filter="all" class="filter-btn bg-blue-600 text-white text-xs font-semibold py-1.5 rounded-lg transition">
+            All
+          </button>
+          <button onclick="setDateFilter('today')" data-filter="today" class="filter-btn bg-slate-900 text-slate-400 border border-slate-700 text-xs font-semibold py-1.5 rounded-lg transition">
+            Today
+          </button>
+          <button onclick="setDateFilter('yesterday')" data-filter="yesterday" class="filter-btn bg-slate-900 text-slate-400 border border-slate-700 text-xs font-semibold py-1.5 rounded-lg transition">
+            Yesterday
+          </button>
+          <button onclick="setDateFilter('week')" data-filter="week" class="filter-btn bg-slate-900 text-slate-400 border border-slate-700 text-xs font-semibold py-1.5 rounded-lg transition">
+            7 Days
+          </button>
+        </div>
+
+        <!-- Filtered Summary Box (Para makita pila nagasto Today vs Yesterday) -->
+        <div class="bg-slate-900/90 rounded-xl p-3 flex justify-between items-center border border-slate-800">
+          <div>
+            <span id="filterLabelText" class="text-[11px] text-slate-400 block">Total Spent (All Time)</span>
+            <span id="filteredSpentAmount" class="text-base font-bold text-rose-400">-₱0.00</span>
+          </div>
+          <div class="text-right">
+            <span class="text-[11px] text-slate-400 block">Added Funds</span>
+            <span id="filteredDepositAmount" class="text-base font-bold text-emerald-400">+₱0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Header -->
+      <div class="flex justify-between items-center px-1">
+        <h3 class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Transactions</h3>
+        <span id="expenseCount" class="text-xs text-slate-500">0 items</span>
+      </div>
+
+      <!-- Listahan -->
+      <div id="expenseList" class="space-y-2.5">
+        <!-- Mo-render diri ang history -->
+      </div>
+    </div>
+
+    <!-- Empty State kung wala pay Account -->
+    <div id="emptyState" class="text-center py-14 px-4 bg-slate-800/50 border border-dashed border-slate-700 rounded-2xl">
+      <p class="text-slate-300 font-medium">Wala pa kay Bank o Agenda nga na-add.</p>
+      <p class="text-xs text-slate-500 mt-1">I-tap ang "+ New Bank/Agenda" sa taas para magsugod (e.g., BPI - ₱10,000).</p>
+    </div>
+
+  </main>
+
+  <!-- Modal para Mag-Add og Bag-ong Bank / Agenda -->
+  <div id="accountModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <h3 class="text-base font-bold text-white">Add Bank or Agenda</h3>
+      <form id="accountForm" class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Title (e.g. BPI Bank, GCash, Travel Fund)</label>
+          <input type="text" id="accountTitle" required placeholder="BPI Bank" 
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Starting Money / Balance (₱)</label>
+          <input type="number" id="accountInitial" step="0.01" min="0" required placeholder="10000" 
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleAccountModal(false)" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-700">
+            Cancel
+          </button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl text-xs font-semibold text-white">
+            Create Account
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
